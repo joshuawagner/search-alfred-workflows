@@ -98,11 +98,9 @@ class Workflows(object):
         return [os.path.join(alfred_dir, f, "info.plist")for f in workflow_dir_names if os.path.isfile(os.path.join(alfred_dir, f, "info.plist"))]
 
     def get_item(self, plist_path):
-        """Get content of worfklow item
-
+        """Get content of workflow item
         Args:
             plist_path (str): Path to info.plist
-
         Returns:
             dict: Content of info.plist
         """
@@ -110,6 +108,7 @@ class Workflows(object):
             plist_info = self._get_plist_info(plist_path)
             name = plist_info.get('name')
             desc = plist_info.get('description')
+            bundle_id = plist_info.get('bundleid')  # <--- Capture bundleID here
             uidata = plist_info.get('uidata')
             item_objects = plist_info.get('objects')
             user_config = plist_info.get('userconfigurationconfig')
@@ -177,6 +176,7 @@ class Workflows(object):
                     'name': name,
                     'path': plist_path,
                     'description': desc,
+                    'bundleID': bundle_id,  # <--- Add bundleID to returned data
                     'keywords': keyword_list,
                     'keyb': keyb_list
                 }
@@ -224,10 +224,8 @@ class Workflows(object):
 
     def search_in_workflows(self, search_term):
         """Search search_term across all workflows and returns matches
-
         Args:
             search_term (str): Search term
-
         Returns:
             list: Workflows matches search
         """
@@ -235,20 +233,23 @@ class Workflows(object):
         matches = list()
         match = False
         for i in wfs:
+            # Check bundleID
+            if 'bundleID' in i and i['bundleID'] and re.search(r'\b' + search_term, i['bundleID'], re.IGNORECASE):
+                matches.append(i)
+                continue  # Skip further checks if bundleID matches
+
+            # Existing search functionality
             val_list = self._flatten_dict(i)
             for s in val_list:
                 if (
-                    type(s) == str and
-                    # search_term.lower() in s.lower()
-                    re.search(r'\b' + search_term, s, re.IGNORECASE)
+                        type(s) == str and
+                        re.search(r'\b' + search_term, s, re.IGNORECASE)
                 ):
-
                     match = True
             if match:
                 matches.append(i)
                 match = False
         return matches
-
     def _flatten_dict(self, tdict):
         """Flatten workflow item to list
 
